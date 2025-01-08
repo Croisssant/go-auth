@@ -33,5 +33,21 @@ func main() {
 		jwtAuth.GET("/ping", auth.JwtTokenCheck)
 	}
 
+	publicRoutes := router.Group("/public")
+	{
+		publicRoutes.POST("/login", auth.Login)
+		publicRoutes.POST("/register", auth.Register)
+	}
+
+	protectedRoutes := router.Group("/protected")
+	protectedRoutes.Use(auth.AuthenticationMiddleware())
+	{
+		protectedRoutes.GET("/ping", func(ctx *gin.Context) {
+			ctx.JSON(http.StatusOK, gin.H{
+				"message": "pong",
+			})
+		})
+	}
+
 	router.Run() // listen and serve on 0.0.0.0:8080
 }
