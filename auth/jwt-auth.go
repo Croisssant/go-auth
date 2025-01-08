@@ -77,7 +77,7 @@ func JwtTokenCheck(ctx *gin.Context) {
 	})
 }
 
-func GenerateToken(userId uint) (string, error) {
+func generateToken(userId uint) (string, error) {
 	claims := jwt.MapClaims{}
 	claims["user_id"] = userId
 	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
@@ -86,7 +86,7 @@ func GenerateToken(userId uint) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func VerifyToken(tokenString string) (jwt.MapClaims, error) {
+func verifyToken(tokenString string) (jwt.MapClaims, error) {
 
 	// Parsing tokenString
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -129,7 +129,7 @@ func AuthenticationMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString = tokenParts[1]
-		claims, err := VerifyToken(tokenString)
+		claims, err := verifyToken(tokenString)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authentication token"})
 			ctx.Abort()
@@ -147,19 +147,24 @@ func Login(ctx *gin.Context) {
 
 	// Check if user credentials are valid
 	if err := ctx.ShouldBindJSON(&user); err != nil {
+		fmt.Printf("Error: %v \n", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+		ctx.Abort()
+		return
 	}
 
 	if user.Username == "user" && user.Password == "password" {
 		// Generate JWT Token when all checks pass
-		token, err := GenerateToken(user.ID)
+		token, err := generateToken(user.ID)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
+			ctx.Abort()
 			return
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"token": token})
 	} else {
+		fmt.Printf("User: %v, Password: %v \n", user.Username, user.Password)
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 	}
 }
@@ -169,6 +174,7 @@ func Register(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&user); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+		ctx.Abort()
 		return
 	}
 
